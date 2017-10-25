@@ -85,7 +85,7 @@ Y=np.reshape(Y,(-1,1))
 X=np.reshape(X,(-1,1764))
 print "shape =",X.shape,Y.shape
 
-print X,Y
+
 
 
 
@@ -105,8 +105,7 @@ layer_2=tf.nn.relu(layer_2)
 out=tf.add(tf.matmul(layer_2,W3),b3)
 out=tf.nn.sigmoid(out)
 
-def f1(): return tf.constant(1.0)
-def f2(): return tf.constant(0.0)
+
 
 cost=tf.reduce_mean(-1*Y_*tf.log(out)-1*(1-Y_)*tf.log(1-out))
 train_step=tf.train.AdamOptimizer(1e-6).minimize(cost)
@@ -118,7 +117,7 @@ correct_prediction=tf.equal(tf.where(tf.less(p,out),tf.constant(1.0,shape=[989,1
 Accuracy=tf.reduce_mean(tf.cast(correct_prediction,tf.float32))*100
 
 
-tf.summary.scalar("cost",cost)
+tf.summary.scalar("cost",out)
 # tf.scalar_summary("accuracy",Accuracy)
 summary_op=tf.summary.merge_all()
 
@@ -128,7 +127,7 @@ tf.global_variables_initializer().run()
 writer=tf.summary.FileWriter('./Graph',sess.graph)	
 
 saver=tf.train.Saver([W1,b1,W2,b2,W3,b3])
-for i in range(0,5000):
+for i in range(0,500):
 	sess.run(train_step,feed_dict={X_:X,Y_:Y})
 	summary=sess.run(summary_op,feed_dict={X_:X,Y_:Y})
 	writer.add_summary(summary,i)
@@ -144,27 +143,3 @@ print("Successfully trained")
 print("Final Accuracy : ",Accuracy.eval(feed_dict={X_:X_test,Y_:Y_test}))
 print(out.eval(feed_dict={X_:X_test,Y_:Y_test}))
 
-
-# test=cv2.imread('./dataset/00040.ppm')#dataset/03/00011.ppm')
-# print 'testing'
-# print test.shape
-# out=np.zeros((test.shape),np.uint8)
-# for i in range(0,test.shape[0]):
-# 	for j in range(0,test.shape[1]):
-# 		out[i,j]=test[i,j]
-# for i in range(0,test.shape[0],10):
-# 	for j in range(0,test.shape[1],10):
-# 		if(isvalid(test,i+64,j+64)==0):
-# 			continue
-# 		if(i%100==0 and j%100==0):
-# 			print i,j
-# 		# patch=np.zeros((64,64,3),dtype=np.uint8)
-# 		patch=test[[k for k in range(i,i+64)],:,:]
-# 		patch=patch[:,[k for k in range(j,j+64)],:]
-# 		# patch=cv2.resize(patch,(64,64))
-# 		if(model.predict(np.reshape(HOG(patch),(-1,1764)))==[1]):
-# 			P1=(j,i)
-# 			P4=(j+64,i+64)
-# 			cv2.rectangle(out,P1,P4,[0,0,255],thickness=1)
-# cv2.imshow("out",out)
-# cv2.waitKey(0)
