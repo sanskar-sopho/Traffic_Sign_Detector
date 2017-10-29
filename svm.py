@@ -84,7 +84,7 @@ model=svm.SVC(C=100, cache_size=5000, class_weight=None, coef0=0.0,
 model.fit(X,Y)
 model.score(X,Y)
 joblib.dump(model,'saved_svm.pkl')
-# model=joblib.load('saved_svm.pkl')
+
 
 
 predict=model.predict(X_test)
@@ -105,26 +105,3 @@ print("Accuracy : ",float((corr*100.0)/(corr+error)))
 print corr,error
 
 
-# test=cv2.imread('./dataset/00040.ppm')#dataset/03/00011.ppm')
-# print 'testing'
-# print test.shape
-# out=np.zeros((test.shape),np.uint8)
-# for i in range(0,test.shape[0]):
-# 	for j in range(0,test.shape[1]):
-# 		out[i,j]=test[i,j]
-# for i in range(0,test.shape[0],10):
-# 	for j in range(0,test.shape[1],10):
-# 		if(isvalid(test,i+64,j+64)==0):
-# 			continue
-# 		if(i%100==0 and j%100==0):
-# 			print i,j
-# 		# patch=np.zeros((64,64,3),dtype=np.uint8)
-# 		patch=test[[k for k in range(i,i+64)],:,:]
-# 		patch=patch[:,[k for k in range(j,j+64)],:]
-# 		# patch=cv2.resize(patch,(64,64))
-# 		if(model.predict(np.reshape(HOG(patch),(-1,1764)))==[1]):
-# 			P1=(j,i)
-# 			P4=(j+64,i+64)
-# 			cv2.rectangle(out,P1,P4,[0,0,255],thickness=1)
-# cv2.imshow("out",out)
-# cv2.waitKey(0)
