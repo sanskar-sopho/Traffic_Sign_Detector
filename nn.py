@@ -107,8 +107,8 @@ out=tf.nn.sigmoid(out)
 
 
 
-cost=tf.reduce_mean(-1*Y_*tf.log(out)-1*(1-Y_)*tf.log(1-out))
-train_step=tf.train.AdamOptimizer(1e-6).minimize(cost)
+cost=tf.reduce_mean(-1*Y_*tf.log(tf.clip_by_value(out,1e-10,1.0))-1*(1-Y_)*tf.log(tf.clip_by_value(1-out,1e-10,1.0)))
+train_step=tf.train.AdamOptimizer(1e-4).minimize(cost)
 p=tf.constant(0.5,shape=[1])
 print Y_
 print out
@@ -117,29 +117,57 @@ correct_prediction=tf.equal(tf.where(tf.less(p,out),tf.constant(1.0,shape=[989,1
 Accuracy=tf.reduce_mean(tf.cast(correct_prediction,tf.float32))*100
 
 
-tf.summary.scalar("cost",out)
+tf.summary.scalar("cost",cost)
 # tf.scalar_summary("accuracy",Accuracy)
 summary_op=tf.summary.merge_all()
 
 sess=tf.InteractiveSession()
 tf.global_variables_initializer().run()
 # tf.reset_default_graph()
-writer=tf.summary.FileWriter('./Graph',sess.graph)	
+# writer=tf.summary.FileWriter('./Graph',sess.graph)	
+
+# saver=tf.train.Saver([W1,b1,W2,b2,W3,b3])
+# for i in range(0,500):
+# 	sess.run(train_step,feed_dict={X_:X,Y_:Y})
+# 	summary=sess.run(summary_op,feed_dict={X_:X,Y_:Y})
+# 	writer.add_summary(summary,i)
+# 	if(i%20==0):
+# 		print i
+# 	if(i%50==0):
+# 		print(out.eval(feed_dict={X_:X_test,Y_:Y_test}),Y_test)
+# 		print("Accuracy : ",Accuracy.eval(feed_dict={X_:X_test,Y_:Y_test}))
+# saver.save(sess,'./tf_model/restore.ckpt')
+# print("Successfully trained")
+
+
+# print("Final Accuracy : ",Accuracy.eval(feed_dict={X_:X_test,Y_:Y_test}))
+# print(out.eval(feed_dict={X_:X_test,Y_:Y_test}))
 
 saver=tf.train.Saver([W1,b1,W2,b2,W3,b3])
-for i in range(0,500):
-	sess.run(train_step,feed_dict={X_:X,Y_:Y})
-	summary=sess.run(summary_op,feed_dict={X_:X,Y_:Y})
-	writer.add_summary(summary,i)
-	if(i%20==0):
-		print i
-	if(i%50==0):
-		print(out.eval(feed_dict={X_:X_test,Y_:Y_test}),Y_test)
-		print("Accuracy : ",Accuracy.eval(feed_dict={X_:X_test,Y_:Y_test}))
-saver.save(sess,'./tf_model/restore.ckpt')
-print("Successfully trained")
+saver.restore(sess,'./tf_model/restore.ckpt')
+print "Restored"
 
-
-print("Final Accuracy : ",Accuracy.eval(feed_dict={X_:X_test,Y_:Y_test}))
-print(out.eval(feed_dict={X_:X_test,Y_:Y_test}))
-
+test=cv2.imread('./00177.ppm')#dataset/03/00011.ppm')
+print 'testing'
+d = 0
+output=np.zeros((test.shape[0],test.shape[1],3),dtype=np.uint8)
+for i in range(0,test.shape[0]):
+	for j in range(0,test.shape[1]):
+		output[i,j]=test[i,j]
+for i in range(0,test.shape[0],10):
+	for j in range(0,test.shape[1],10):
+		if(isvalid(test,i+64,j+64)==0):
+			continue
+		if(i%100==0 and j%100==0):
+			print i,j
+		patch=test[[k for k in range(i,i+64)],:,:]
+		patch=patch[:,[k for k in range(j,j+64)],:]
+		if(out.eval(feed_dict={X_:np.reshape(HOG(patch),(-1,1764))})>[0.75]):
+			P1=(j,i)
+			P4=(j+64,i+64)
+			cv2.rectangle(output,P1,P4,[0,0,255],thickness=1)
+			#cv2.imshow("box", out[i:i+64, j:j+64, :]); cv2.waitKey(0);
+			# cv2.imwrite("detected"+str(d)+".png", out[i:i+64, j:j+64, :])
+			d=d+1
+cv2.imshow("out",output)
+cv2.waitKey(0)
