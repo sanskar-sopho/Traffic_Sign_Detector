@@ -11,19 +11,22 @@ def isvalid(img,i,j):
 	return 1
 
 def HOG(img):
-	winSize=(64,64)
-	blockSize=(16,16)
-	blockStride=(8,8)
-	cellSize=(8,8)
-	nbins=9
-	derivAperture = 1
-	winSigma = 4.
-	histogramNormType = 0
-	L2HysThreshold = 2.0000000000000001e-01
-	gammaCorrection = 0
-	nlevels = 64
-	hog=cv2.HOGDescriptor(winSize,blockSize,blockStride,cellSize,nbins,derivAperture,winSigma,histogramNormType,L2HysThreshold,gammaCorrection,nlevels)
-	return hog.compute(img)
+	X=np.array(img)
+	X=np.reshape(X,64*64*3)
+	return X
+	# winSize=(64,64)
+	# blockSize=(16,16)
+	# blockStride=(8,8)
+	# cellSize=(8,8)
+	# nbins=9
+	# derivAperture = 1
+	# winSigma = 4.
+	# histogramNormType = 0
+	# L2HysThreshold = 2.0000000000000001e-01
+	# gammaCorrection = 0
+	# nlevels = 64
+	# hog=cv2.HOGDescriptor(winSize,blockSize,blockStride,cellSize,nbins,derivAperture,winSigma,histogramNormType,L2HysThreshold,gammaCorrection,nlevels)
+	# return hog.compute(img)
 
 
 def images_and_hog(folder):
@@ -43,8 +46,8 @@ def images_and_hog(folder):
 			else:
 				X.append(feat)
 	X=np.array(X)
-	X=np.reshape(X,(count-count_test,1764))
-	X_test=np.reshape(X_test,(count_test,1764))
+	X=np.reshape(X,(count-count_test,64*64*3))
+	X_test=np.reshape(X_test,(count_test,64*64*3))
 	return X,X_test
 
 #**************Training***********
@@ -57,8 +60,8 @@ for i in range (0,42):
 	x,x_test=images_and_hog(folder)
 	X=np.append(X,x)
 	X_test=np.append(X_test,x_test)
-X=np.reshape(X,(-1,1764))
-X_test=np.reshape(X_test,(-1,1764))
+X=np.reshape(X,(-1,64*64*3))
+X_test=np.reshape(X_test,(-1,64*64*3))
 print "Shape=",X.shape,X_test.shape
 Y=np.array([1 for i in range(0,X.shape[0])])
 num_positive_example=X.shape[0]
@@ -72,8 +75,8 @@ x,x_test=images_and_hog(folder)
 x=x[np.random.choice(x.shape[0],size=1100,replace=False),:]
 X=np.append(X,x)
 X_test=np.append(X_test,x_test)
-X=np.reshape(X,(-1,1764))
-X_test=np.reshape(X_test,(-1,1764))
+X=np.reshape(X,(-1,64*64*3))
+X_test=np.reshape(X_test,(-1,64*64*3))
 print X.shape[0]
 Y=np.append(Y,[0 for i in range(0,X.shape[0]-num_positive_example)])
 Y=np.reshape(Y,(-1,1))
@@ -82,16 +85,18 @@ Y_test=np.reshape(Y_test,(-1,1))
 # X=np.append(X,X_test)
 # Y=np.append(Y,Y_test)
 Y=np.reshape(Y,(-1,1))
-X=np.reshape(X,(-1,1764))
+X=np.reshape(X,(-1,64*64*3))
+X=np.array(X,dtype=np.float32)
+Y=np.array(Y,dtype=np.float32)
 print "shape =",X.shape,Y.shape
 
 
 
 
 
-X_=tf.placeholder(tf.float32,[None,1764])
+X_=tf.placeholder(tf.float32,[None,64*64*3])
 Y_=tf.placeholder(tf.float32,[None,1])
-W1=tf.Variable(tf.random_normal([1764,2000],stddev=0.1))
+W1=tf.Variable(tf.random_normal([64*64*3,2000],stddev=0.1))
 b1=tf.Variable(tf.constant(0.1,shape=[2000]))
 W2=tf.Variable(tf.random_normal([2000,2000],stddev=0.1))
 b2=tf.Variable(tf.constant(0.1,shape=[2000]))
@@ -106,9 +111,9 @@ out=tf.add(tf.matmul(layer_2,W3),b3)
 out=tf.nn.sigmoid(out)
 
 
-
-cost=tf.reduce_mean(-1*Y_*tf.log(tf.clip_by_value(out,1e-10,1.0))-1*(1-Y_)*tf.log(tf.clip_by_value(1-out,1e-10,1.0)))
-train_step=tf.train.AdamOptimizer(1e-4).minimize(cost)
+# cost=tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=Y_,logits=out))
+cost=tf.reduce_mean(-1*Y_*tf.log(tf.clip_by_value(out,1e-10,0.0001))-1*(1-Y_)*tf.log(tf.clip_by_value(1-out,1e-10,0.0001)))
+train_step=tf.train.GradientDescentOptimizer(1e-4).minimize(cost)
 p=tf.constant(0.5,shape=[1])
 print Y_
 print out
@@ -124,30 +129,30 @@ summary_op=tf.summary.merge_all()
 sess=tf.InteractiveSession()
 tf.global_variables_initializer().run()
 # tf.reset_default_graph()
-# writer=tf.summary.FileWriter('./Graph',sess.graph)	
+writer=tf.summary.FileWriter('./Graph_pix',sess.graph)	
 
-# saver=tf.train.Saver([W1,b1,W2,b2,W3,b3])
-# for i in range(0,500):
-# 	sess.run(train_step,feed_dict={X_:X,Y_:Y})
-# 	summary=sess.run(summary_op,feed_dict={X_:X,Y_:Y})
-# 	writer.add_summary(summary,i)
-# 	if(i%20==0):
-# 		print i
-# 	if(i%50==0):
-# 		print(out.eval(feed_dict={X_:X_test,Y_:Y_test}),Y_test)
-# 		print("Accuracy : ",Accuracy.eval(feed_dict={X_:X_test,Y_:Y_test}))
-# saver.save(sess,'./tf_model/restore.ckpt')
-# print("Successfully trained")
+saver=tf.train.Saver([W1,b1,W2,b2,W3,b3])
+for i in range(0,500):
+	sess.run(train_step,feed_dict={X_:X,Y_:Y})
+	summary=sess.run(summary_op,feed_dict={X_:X,Y_:Y})
+	writer.add_summary(summary,i)
+	if(i%20==0):
+		print i
+	if(i%50==0):
+		print(out.eval(feed_dict={X_:X_test,Y_:Y_test}))
+		print("Accuracy : ",Accuracy.eval(feed_dict={X_:X_test,Y_:Y_test}))
+saver.save(sess,'./tf_model_pix/restore.ckpt')
+print("Successfully trained")
 
 
 # print("Final Accuracy : ",Accuracy.eval(feed_dict={X_:X_test,Y_:Y_test}))
 # print(out.eval(feed_dict={X_:X_test,Y_:Y_test}))
 
-saver=tf.train.Saver([W1,b1,W2,b2,W3,b3])
-saver.restore(sess,'./tf_model/restore.ckpt')
-print "Restored"
+# saver=tf.train.Saver([W1,b1,W2,b2,W3,b3])
+# saver.restore(sess,'./tf_model/restore.ckpt')
+# print "Restored"
 
-test=cv2.imread('./00177.ppm')#dataset/03/00011.ppm')
+test=cv2.imread('./images/00023.ppm')#dataset/03/00011.ppm')
 print 'testing'
 d = 0
 output=np.zeros((test.shape[0],test.shape[1],3),dtype=np.uint8)
@@ -162,7 +167,7 @@ for i in range(0,test.shape[0],10):
 			print i,j
 		patch=test[[k for k in range(i,i+64)],:,:]
 		patch=patch[:,[k for k in range(j,j+64)],:]
-		if(out.eval(feed_dict={X_:np.reshape(HOG(patch),(-1,1764))})>[0.75]):
+		if(out.eval(feed_dict={X_:np.reshape(HOG(patch),(-1,64*64*3))})>[0.75]):
 			P1=(j,i)
 			P4=(j+64,i+64)
 			cv2.rectangle(output,P1,P4,[0,0,255],thickness=1)
